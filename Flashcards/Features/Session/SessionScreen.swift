@@ -315,3 +315,8 @@ private func previewCard(_ front: String, _ back: String) -> CardSummary {
   SessionView(
     state: .empty, onReveal: {}, onGrade: { _ in }, onReviewMisses: {}, onEnd: {})
 }
+
+#Preview("Store unreadable") {
+  SessionView(
+    state: .failed, onReveal: {}, onGrade: { _ in }, onReviewMisses: {}, onEnd: {})
+}

@@ -30,10 +30,6 @@ struct SessionResults: Equatable {
   let knewIt: Int
   let total: Int
   let misses: [CardSummary]
-
-  var score: Double {
-    total == 0 ? 0 : Double(knewIt) / Double(total)
-  }
 }
 
 /// Everything Review can be, as one value. A single enum for the reason [DecksState] gives.

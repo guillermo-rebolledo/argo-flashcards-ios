@@ -18,7 +18,7 @@ struct DeckDetailScreen: View {
   /// this screen still names no concrete repository — the composition root does the assembling.
   private let makeSessionModel: () -> SessionModel
 
-  @State private var isStudying = false
+  @State private var isReviewing = false
   @Environment(\.dismiss) private var dismiss
 
   init(
@@ -40,12 +40,12 @@ struct DeckDetailScreen: View {
       onDeleteCard: { model.deleteCard($0) },
       onRenameDeck: { model.renameDeck(to: $0) },
       onDeleteDeck: { model.deleteDeck() },
-      onStartSession: { isStudying = true }
+      onStartSession: { isReviewing = true }
     )
     // A full-screen cover, not a push: the tab bar has no business being in a Session, and the
     // Card gets the whole screen. Re-reading on dismissal is what shows the mastery the sitting
     // just earned — every Grade in it moved a streak this screen counts.
-    .fullScreenCover(isPresented: $isStudying, onDismiss: { model.load() }) {
+    .fullScreenCover(isPresented: $isReviewing, onDismiss: { model.load() }) {
       SessionScreen(model: makeSessionModel())
     }
     // On appear rather than once, so a Deck renamed or emptied elsewhere is picked up on the way

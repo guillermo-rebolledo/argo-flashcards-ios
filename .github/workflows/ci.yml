@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCHEME: Flashcards
+  # OS is deliberately `latest` rather than a pinned version. The iOS 26 floor is enforced by the
+  # project's deployment target (ADR 0006), so pinning the simulator runtime here would add a
+  # second thing to keep in step with the runner image for no extra safety — and it breaks the
+  # build the day the image ships a different patch release.
+  DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
+
+jobs:
+  format:
+    name: swift-format
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # Formatting is settled by a tool, not by review. --strict makes lint warnings fail the job.
+      - name: Lint
+        run: |
+          xcrun swift-format lint \
+            --recursive --strict \
+            --configuration .swift-format \
+            Flashcards FlashcardsTests
+
+  build-and-test:
+    name: Build and test
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Flashcards.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7

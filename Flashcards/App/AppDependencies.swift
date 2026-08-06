@@ -14,9 +14,25 @@ struct AppDependencies {
   let modelContainer: ModelContainer
   let dateProvider: any DateProvider
 
+  /// The one context the screens read and write through.
+  ///
+  /// One rather than one-per-screen, because two contexts over the same container are two copies
+  /// of the object graph: a Deck renamed through one is stale in the other until it re-fetches,
+  /// which is a bug the app would only see once two screens showed the same Deck. Tests make their
+  /// own context per test, which is what keeps them isolated from each other.
+  let mainContext: ModelContext
+
   init(modelContainer: ModelContainer, dateProvider: any DateProvider = SystemDateProvider()) {
     self.modelContainer = modelContainer
     self.dateProvider = dateProvider
+    self.mainContext = ModelContext(modelContainer)
+  }
+
+  /// Builds the Decks screen's model. Assembly lives here rather than in the view so a screen
+  /// never names a concrete repository — the one rule this type exists to enforce.
+  func makeDecksModel() -> DecksModel {
+    DecksModel(
+      repository: SwiftDataDeckRepository(context: mainContext, dateProvider: dateProvider))
   }
 
   /// Assembles the production graph.

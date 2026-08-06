@@ -6,18 +6,27 @@ import SwiftUI
 /// and `DeckDetailView` draws a `DeckDetailState` and calls back, so every state — the empty
 /// Deck, a filter matching nothing, the broken store — is previewable without a store.
 ///
-/// The start-Session button the spec puts on this screen arrives with Review, which is the ticket
-/// that gives it somewhere to go.
+/// Starting a Session is presented from here rather than pushed: Review is a modal task with its
+/// own exit, and this screen is where it is dismissed back to.
 struct DeckDetailScreen: View {
   /// Built when the screen is first pushed and kept for as long as it is on the stack. The
   /// autoclosure is what stops a re-evaluated navigation destination from rebuilding it: `State`
   /// keeps the first value it is given.
   @State private var model: DeckDetailModel
 
+  /// Builds the Session's model for this Deck. A closure rather than the repository itself, so
+  /// this screen still names no concrete repository — the composition root does the assembling.
+  private let makeSessionModel: () -> SessionModel
+
+  @State private var isReviewing = false
   @Environment(\.dismiss) private var dismiss
 
-  init(model: @autoclosure () -> DeckDetailModel) {
+  init(
+    model: @autoclosure () -> DeckDetailModel,
+    makeSessionModel: @escaping () -> SessionModel
+  ) {
     _model = State(wrappedValue: model())
+    self.makeSessionModel = makeSessionModel
   }
 
   var body: some View {
@@ -30,8 +39,15 @@ struct DeckDetailScreen: View {
       onEditCard: { model.updateCard($0, front: $1, back: $2) },
       onDeleteCard: { model.deleteCard($0) },
       onRenameDeck: { model.renameDeck(to: $0) },
-      onDeleteDeck: { model.deleteDeck() }
+      onDeleteDeck: { model.deleteDeck() },
+      onStartSession: { isReviewing = true }
     )
+    // A full-screen cover, not a push: the tab bar has no business being in a Session, and the
+    // Card gets the whole screen. Re-reading on dismissal is what shows the mastery the sitting
+    // just earned — every Grade in it moved a streak this screen counts.
+    .fullScreenCover(isPresented: $isReviewing, onDismiss: { model.load() }) {
+      SessionScreen(model: makeSessionModel())
+    }
     // On appear rather than once, so a Deck renamed or emptied elsewhere is picked up on the way
     // back to this screen.
     .onAppear { model.load() }
@@ -58,6 +74,7 @@ struct DeckDetailView: View {
   let onDeleteCard: (CardSummary) -> Void
   let onRenameDeck: (String) -> Void
   let onDeleteDeck: () -> Void
+  let onStartSession: () -> Void
 
   /// What the Card editor is doing when it is up: writing a new Card, or fixing one that exists.
   /// One sheet for both, because the fields and the rule about them are the same.
@@ -211,6 +228,14 @@ struct DeckDetailView: View {
         }
       }
       .pickerStyle(.segmented)
+
+      // Studying is what the Deck is for, so it is the one prominent action on the screen — and
+      // it sits above the Cards rather than in the toolbar, where it would compete with adding
+      // one. It draws from the whole Deck whatever the filter is showing.
+      Button("Start Session", systemImage: "play.fill") { onStartSession() }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .frame(maxWidth: .infinity)
     }
     .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 8, trailing: 4))
   }
@@ -291,7 +316,8 @@ private let previewCards = [
       state: .cards(DeckContents(cards: previewCards, masteredCount: 1, cardCount: 3)),
       filter: .all,
       onFilterChange: { _ in }, onAddCard: { _, _ in }, onEditCard: { _, _, _ in },
-      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {}
+      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {},
+      onStartSession: {}
     )
   }
 }
@@ -303,7 +329,8 @@ private let previewCards = [
       state: .cards(DeckContents(cards: [], masteredCount: 0, cardCount: 3)),
       filter: .mastered,
       onFilterChange: { _ in }, onAddCard: { _, _ in }, onEditCard: { _, _, _ in },
-      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {}
+      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {},
+      onStartSession: {}
     )
   }
 }
@@ -313,7 +340,8 @@ private let previewCards = [
     DeckDetailView(
       deckName: "Spanish verbs", state: .empty, filter: .all,
       onFilterChange: { _ in }, onAddCard: { _, _ in }, onEditCard: { _, _, _ in },
-      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {}
+      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {},
+      onStartSession: {}
     )
   }
 }
@@ -323,7 +351,8 @@ private let previewCards = [
     DeckDetailView(
       deckName: "Spanish verbs", state: .failed, filter: .all,
       onFilterChange: { _ in }, onAddCard: { _, _ in }, onEditCard: { _, _, _ in },
-      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {}
+      onDeleteCard: { _ in }, onRenameDeck: { _ in }, onDeleteDeck: {},
+      onStartSession: {}
     )
   }
 }

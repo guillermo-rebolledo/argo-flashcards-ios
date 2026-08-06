@@ -45,6 +45,14 @@ struct AppDependencies {
       cardRepository: SwiftDataCardRepository(context: mainContext, dateProvider: dateProvider))
   }
 
+  /// Builds a Session's model, for the Deck the user started studying. One per presentation: the
+  /// sitting it models begins when the cover goes up and is over when it comes down.
+  func makeSessionModel(forDeckWithID deckID: UUID) -> SessionModel {
+    SessionModel(
+      deckID: deckID,
+      cardRepository: SwiftDataCardRepository(context: mainContext, dateProvider: dateProvider))
+  }
+
   /// Assembles the production graph.
   static func makeLive() throws -> AppDependencies {
     AppDependencies(

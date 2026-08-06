@@ -55,6 +55,16 @@ protocol CardRepository {
 
   /// Deletes this Card. Deleting one that is no longer there is likewise not an error.
   func delete(cardWithID id: UUID) throws
+
+  /// Applies a Grade to the Card's Mastery streak and stamps it as seen now.
+  ///
+  /// **This is the only way a streak ever moves, and the only place a last-seen time is written.**
+  /// The rule itself — `Knew it` lifts the streak by one, `Again` returns it to zero however long
+  /// the run before it was — lives in the one implementation below rather than in the Session that
+  /// calls this, so a second caller cannot arrive at a second version of it.
+  ///
+  /// A Card that is no longer there is not an error, for the reason `cards(inDeckWithID:)` gives.
+  func recordGrade(_ grade: Grade, forCardWithID id: UUID) throws
 }
 
 /// The one implementation: SwiftData, over the app's real schema.
@@ -95,6 +105,19 @@ final class SwiftDataCardRepository: CardRepository {
   func delete(cardWithID id: UUID) throws {
     guard let card = try storedCard(withID: id) else { return }
     context.delete(card)
+    try context.save()
+  }
+
+  func recordGrade(_ grade: Grade, forCardWithID id: UUID) throws {
+    guard let card = try storedCard(withID: id) else { return }
+    switch grade {
+    case .knewIt: card.masteryStreak += 1
+    // Zero rather than a decrement: one `Again` says the Card did not come back, whatever the run
+    // before it was. This is also what returns a Mastered Card to Learning — there is no separate
+    // demotion, because Mastered is not a thing to demote. See ADR 0003.
+    case .again: card.masteryStreak = 0
+    }
+    card.lastSeenAt = dateProvider.now
     try context.save()
   }
 

@@ -1,0 +1,36 @@
+.DS_Store
+
+## Xcode
+build/
+DerivedData/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+
+## Xcode per-user state
+## The .xcodeproj itself is committed (see ADR 0006 and the spec's Structure
+## section) — only the per-user slice of it is ignored.
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+## Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+## Secrets — the Anthropic key lives in the Keychain (ADR 0002), never on disk.
+## This is belt-and-braces against a local override file being committed.
+*.xcconfig.local
+Secrets.xcconfig

@@ -35,6 +35,16 @@ struct AppDependencies {
       repository: SwiftDataDeckRepository(context: mainContext, dateProvider: dateProvider))
   }
 
+  /// Builds a Deck detail screen's model, for the Deck the user opened. One per push: unlike the
+  /// Decks list, this screen's model is about one Deck and has nothing to say once the user has
+  /// left it.
+  func makeDeckDetailModel(for deck: DeckSummary) -> DeckDetailModel {
+    DeckDetailModel(
+      deck: deck,
+      deckRepository: SwiftDataDeckRepository(context: mainContext, dateProvider: dateProvider),
+      cardRepository: SwiftDataCardRepository(context: mainContext, dateProvider: dateProvider))
+  }
+
   /// Assembles the production graph.
   static func makeLive() throws -> AppDependencies {
     AppDependencies(

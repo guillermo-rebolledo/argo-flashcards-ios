@@ -7,11 +7,16 @@ import SwiftUI
 /// one and the broken-store one — be previewed and reasoned about without a store, and it is the
 /// shape every later screen copies.
 ///
-/// The "Up next" card and navigation into Deck detail arrive with their own tickets.
+/// The "Up next" card arrives with its own ticket.
 struct DecksScreen: View {
   /// Owned by the shell and handed in, not created here: the model outlives any one appearance of
   /// this view, and the composition root is the only place that knows how to build one.
   let model: DecksModel
+
+  /// Builds the model for a Deck the user opened. A closure rather than the dependencies
+  /// themselves, so this screen still names no concrete repository — the composition root does
+  /// the assembling, here as everywhere.
+  let makeDeckDetailModel: (DeckSummary) -> DeckDetailModel
 
   var body: some View {
     DecksView(
@@ -20,6 +25,12 @@ struct DecksScreen: View {
       onRename: { model.rename($0, to: $1) },
       onDelete: { model.delete($0) }
     )
+    // The destination lives here rather than in `DecksView`, which is what keeps that view
+    // drawable from a state alone — previews and any later screen linking to a Deck get the same
+    // rows without needing a way to build a Deck detail model.
+    .navigationDestination(for: DeckSummary.self) { deck in
+      DeckDetailScreen(model: makeDeckDetailModel(deck))
+    }
     .onAppear { model.load() }
   }
 }
@@ -104,16 +115,18 @@ struct DecksView: View {
     case .decks(let decks):
       List {
         ForEach(decks) { deck in
-          DeckRow(deck: deck)
-            // Rename and delete reach the Deck by swipe here. Deck detail's toolbar carries the
-            // same two, which is where the spec puts them; a context menu as well would be a
-            // third way to the same pair and is not asked for.
-            .swipeActions(edge: .trailing) {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                deckBeingDeleted = deck
-              }
-              Button("Rename", systemImage: "pencil") { startRenaming(deck) }
+          NavigationLink(value: deck) {
+            DeckRow(deck: deck)
+          }
+          // Rename and delete reach the Deck by swipe here. Deck detail's toolbar carries the
+          // same two, which is where the spec puts them; a context menu as well would be a
+          // third way to the same pair and is not asked for.
+          .swipeActions(edge: .trailing) {
+            Button("Delete", systemImage: "trash", role: .destructive) {
+              deckBeingDeleted = deck
             }
+            Button("Rename", systemImage: "pencil") { startRenaming(deck) }
+          }
         }
       }
 

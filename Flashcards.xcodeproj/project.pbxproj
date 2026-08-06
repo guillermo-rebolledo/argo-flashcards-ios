@@ -23,7 +23,6 @@
 				"Core/Generation/README.md",
 				"Core/Reminders/README.md",
 				"Core/Share/README.md",
-				"Features/DeckDetail/README.md",
 				"Features/Generate/README.md",
 				"Features/Session/README.md",
 			);

@@ -14,8 +14,9 @@ final class Card {
   /// The number of consecutive `Knew it` Grades. `Again` resets it to zero.
   ///
   /// This is the only state a Card carries about how well it is known. **Mastered is derived from
-  /// it and never stored** — see ADR 0003. The derivation and the threshold arrive with the
-  /// mastery rule, which is built test-first in its own ticket.
+  /// it and never stored** — see ADR 0003. Nothing increments this yet; Grading arrives with the
+  /// mastery rule, which is built test-first in its own ticket. It exists here so the Deck
+  /// detail filter and the mastery summary are computed from a real value rather than stubbed.
   var masteryStreak: Int
 
   /// When this Card was last shown in a Session. `nil` until it has been seen once.
@@ -41,4 +42,20 @@ final class Card {
     self.createdAt = createdAt
     self.deck = deck
   }
+}
+
+extension Card {
+  /// The number of consecutive `Knew it` Grades at which a Card becomes Mastered.
+  ///
+  /// One constant, here, rather than a number repeated at each place that filters or counts. It
+  /// is a product decision and not a tuning knob: moving it re-labels every Card in the store at
+  /// once, with no migration and no way to grandfather Cards in. See ADR 0003.
+  static let masteryThreshold = 3
+
+  /// Whether this Card is Mastered — computed, never stored.
+  ///
+  /// A stored copy would have to be rewritten by every write that touches the streak, and the
+  /// day one of them forgot, the two would disagree with no way to tell which was right. See
+  /// ADR 0003.
+  var isMastered: Bool { masteryStreak >= Self.masteryThreshold }
 }

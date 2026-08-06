@@ -50,12 +50,9 @@ extension Card {
   /// One constant, here, rather than a number repeated at each place that filters or counts. It
   /// is a product decision and not a tuning knob: moving it re-labels every Card in the store at
   /// once, with no migration and no way to grandfather Cards in. See ADR 0003.
+  /// The derivation itself lives on [CardSummary] — the value every reader of a Card actually
+  /// holds — and exists only there, so there is one comparison against this constant and not two
+  /// to fall out of step with each other. This type carries the number; nothing stores the
+  /// answer.
   static let masteryThreshold = 3
-
-  /// Whether this Card is Mastered — computed, never stored.
-  ///
-  /// A stored copy would have to be rewritten by every write that touches the streak, and the
-  /// day one of them forgot, the two would disagree with no way to tell which was right. See
-  /// ADR 0003.
-  var isMastered: Bool { masteryStreak >= Self.masteryThreshold }
 }

@@ -76,6 +76,7 @@ struct DeckDetailView: View {
   @State private var editing: CardEditing?
   @State private var cardBeingDeleted: CardSummary?
   @State private var isRenamingDeck = false
+  @State private var isDeletingDeck = false
   @State private var enteredDeckName = ""
 
   var body: some View {
@@ -120,6 +121,15 @@ struct DeckDetailView: View {
         Button("Cancel", role: .cancel) {}
       } message: { card in
         Text("“\(card.front)” will be deleted. This cannot be undone.")
+      }
+      // Deleting a Deck takes every Card in it. There is no undo anywhere in the app, so this
+      // confirmation is the only thing between a mis-tap and losing the lot — and it names what
+      // is going, so the question is answerable without dismissing it.
+      .confirmationDialog("Delete Deck?", isPresented: $isDeletingDeck) {
+        Button("Delete", role: .destructive) { onDeleteDeck() }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("“\(deckName)” and its Cards will be deleted. This cannot be undone.")
       }
   }
 
@@ -205,15 +215,16 @@ struct DeckDetailView: View {
     .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 8, trailing: 4))
   }
 
-  /// Rename and delete live here, in the Deck's own overflow menu, rather than on the Deck list
-  /// row alone. The Android spec left this menu as an open question; the iOS spec resolves it.
+  /// Rename and delete live here, in the Deck's own overflow menu, and **only** here — they have
+  /// moved off the Deck list rather than gaining a second home. The Android spec left this menu
+  /// as an open question; the iOS spec resolves it.
   private var deckMenu: some View {
     Menu {
       Button("Rename Deck", systemImage: "pencil") {
         enteredDeckName = deckName
         isRenamingDeck = true
       }
-      Button("Delete Deck", systemImage: "trash", role: .destructive) { onDeleteDeck() }
+      Button("Delete Deck", systemImage: "trash", role: .destructive) { isDeletingDeck = true }
     } label: {
       Label("Deck options", systemImage: "ellipsis")
     }
@@ -256,77 +267,6 @@ private struct CardRow: View {
           .accessibilityLabel("Mastered")
       }
     }
-  }
-}
-
-/// Writing a Card, and fixing one. The same two fields either way, with the reminder that a Card
-/// holds one idea sitting under them.
-///
-/// The fields grow with what is typed rather than scrolling sideways in a single line, and both
-/// take Dynamic Type — a Back is a sentence, and at an accessibility size a fixed-height field
-/// would show three words of it.
-private struct CardEditorSheet: View {
-  let title: String
-  let confirmTitle: String
-  let onConfirm: (String, String) -> Void
-
-  @State private var front: String
-  @State private var back: String
-  @Environment(\.dismiss) private var dismiss
-
-  init(
-    title: String,
-    front: String,
-    back: String,
-    confirmTitle: String,
-    onConfirm: @escaping (String, String) -> Void
-  ) {
-    self.title = title
-    self.confirmTitle = confirmTitle
-    self.onConfirm = onConfirm
-    _front = State(initialValue: front)
-    _back = State(initialValue: back)
-  }
-
-  var body: some View {
-    NavigationStack {
-      Form {
-        Section("Front") {
-          TextField("A short term, or a direct question", text: $front, axis: .vertical)
-        }
-        Section {
-          TextField("The answer, in one plain sentence", text: $back, axis: .vertical)
-        } header: {
-          Text("Back")
-        } footer: {
-          // Story 19, said once and in the place it is acted on rather than as a tip elsewhere.
-          Text("One idea per Card. If it holds two, it is two Cards.")
-        }
-      }
-      .navigationTitle(title)
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(confirmTitle) {
-            onConfirm(front, back)
-            dismiss()
-          }
-          // A Card is two content fields, so both are required. Unlike the alerts elsewhere in
-          // the app, a sheet's toolbar button honours `disabled`, so the rule can be shown here
-          // as well as enforced in the model.
-          .disabled(!isComplete)
-        }
-      }
-    }
-    .presentationDetents([.medium, .large])
-  }
-
-  private var isComplete: Bool {
-    !front.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && !back.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 }
 

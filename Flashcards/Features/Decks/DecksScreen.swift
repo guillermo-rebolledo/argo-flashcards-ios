@@ -21,9 +21,7 @@ struct DecksScreen: View {
   var body: some View {
     DecksView(
       state: model.state,
-      onCreateDeck: { model.createDeck(named: $0) },
-      onRename: { model.rename($0, to: $1) },
-      onDelete: { model.delete($0) }
+      onCreateDeck: { model.createDeck(named: $0) }
     )
     // The destination lives here rather than in `DecksView`, which is what keeps that view
     // drawable from a state alone — previews and any later screen linking to a Deck get the same
@@ -43,14 +41,10 @@ struct DecksScreen: View {
 struct DecksView: View {
   let state: DecksState
   let onCreateDeck: (String) -> Void
-  let onRename: (DeckSummary, String) -> Void
-  let onDelete: (DeckSummary) -> Void
 
-  /// The name being typed, shared by the create and rename prompts — only one of them is ever up.
+  /// The name being typed into the create prompt.
   @State private var enteredName = ""
   @State private var isNamingNewDeck = false
-  @State private var deckBeingRenamed: DeckSummary?
-  @State private var deckBeingDeleted: DeckSummary?
 
   var body: some View {
     content
@@ -70,22 +64,6 @@ struct DecksView: View {
         Button("Create") { onCreateDeck(enteredName) }
       } message: {
         Text("What is this Deck about?")
-      }
-      .alert("Rename Deck", isPresented: isRenaming, presenting: deckBeingRenamed) { deck in
-        TextField("Name", text: $enteredName)
-        Button("Cancel", role: .cancel) {}
-        Button("Rename") { onRename(deck, enteredName) }
-      }
-      // Deleting is confirmed rather than undoable — there is no undo anywhere in the app, so the
-      // confirmation is the only thing standing between a mis-tap and losing a Deck's Cards. The
-      // Deck is named in the message so the question is answerable without dismissing it.
-      .confirmationDialog(
-        "Delete Deck?", isPresented: isDeleting, presenting: deckBeingDeleted
-      ) { deck in
-        Button("Delete", role: .destructive) { onDelete(deck) }
-        Button("Cancel", role: .cancel) {}
-      } message: { deck in
-        Text("“\(deck.name)” and its Cards will be deleted. This cannot be undone.")
       }
   }
 
@@ -115,17 +93,10 @@ struct DecksView: View {
     case .decks(let decks):
       List {
         ForEach(decks) { deck in
+          // A row opens the Deck and does nothing else. Renaming and deleting live in Deck
+          // detail's overflow menu — one home each, which is what the spec resolves.
           NavigationLink(value: deck) {
             DeckRow(deck: deck)
-          }
-          // Rename and delete reach the Deck by swipe here. Deck detail's toolbar carries the
-          // same two, which is where the spec puts them; a context menu as well would be a
-          // third way to the same pair and is not asked for.
-          .swipeActions(edge: .trailing) {
-            Button("Delete", systemImage: "trash", role: .destructive) {
-              deckBeingDeleted = deck
-            }
-            Button("Rename", systemImage: "pencil") { startRenaming(deck) }
           }
         }
       }
@@ -163,21 +134,6 @@ struct DecksView: View {
     enteredName = ""
     isNamingNewDeck = true
   }
-
-  private func startRenaming(_ deck: DeckSummary) {
-    enteredName = deck.name
-    deckBeingRenamed = deck
-  }
-
-  /// `presenting:` needs a `Bool` binding alongside the value; these derive one from the other so
-  /// the two cannot disagree.
-  private var isRenaming: Binding<Bool> {
-    Binding(get: { deckBeingRenamed != nil }, set: { if !$0 { deckBeingRenamed = nil } })
-  }
-
-  private var isDeleting: Binding<Bool> {
-    Binding(get: { deckBeingDeleted != nil }, set: { if !$0 { deckBeingDeleted = nil } })
-  }
 }
 
 /// One Deck in the list. Content layer: a standard row sitting under the glass tab bar, with no
@@ -201,7 +157,7 @@ private struct DeckRow: View {
         DeckSummary(id: UUID(), name: "Spanish verbs", createdAt: .now),
         DeckSummary(id: UUID(), name: "Kanji — chapter 3", createdAt: .now),
       ]),
-      onCreateDeck: { _ in }, onRename: { _, _ in }, onDelete: { _ in }
+      onCreateDeck: { _ in }
     )
   }
 }
@@ -209,13 +165,13 @@ private struct DeckRow: View {
 #Preview("First launch") {
   NavigationStack {
     DecksView(
-      state: .empty, onCreateDeck: { _ in }, onRename: { _, _ in }, onDelete: { _ in })
+      state: .empty, onCreateDeck: { _ in })
   }
 }
 
 #Preview("Store unreadable") {
   NavigationStack {
     DecksView(
-      state: .failed, onCreateDeck: { _ in }, onRename: { _, _ in }, onDelete: { _ in })
+      state: .failed, onCreateDeck: { _ in })
   }
 }

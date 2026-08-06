@@ -157,7 +157,15 @@ final class DeckDetailModel {
     let back = back.trimmed
     guard !front.isEmpty, !back.isEmpty else { return }
 
-    perform { try cardRepository.addCard(toDeckWithID: deckID, front: front, back: back) }
+    perform {
+      let added = try cardRepository.addCard(toDeckWithID: deckID, front: front, back: back)
+
+      // A new Card is Learning and unseen, so the Mastered filter would hide it the instant it
+      // was written — the Card would be saved and the screen would look as though nothing had
+      // happened. The filter steps aside rather than the Card disappearing: seeing what has been
+      // added so far is the point of adding Cards here.
+      if let added, !filter.matches(added) { filter = .all }
+    }
   }
 
   /// Rewrites a Card's Front and Back. Blank is ignored, for the reason `addCard` gives.

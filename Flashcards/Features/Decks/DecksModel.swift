@@ -60,25 +60,14 @@ final class DecksModel {
   /// Creates an empty Deck. A name that is blank once trimmed is not a name, and the action does
   /// nothing rather than making a Deck called "". This is the only place that rule lives, so a
   /// screen cannot be the thing enforcing it.
+  ///
+  /// Creating is all this screen does to a Deck. Renaming and deleting live in Deck detail, on
+  /// the Deck they act on, which is where the spec puts them.
   func createDeck(named name: String) {
     let name = name.trimmed
     guard !name.isEmpty else { return }
 
     perform { try repository.createDeck(named: name) }
-  }
-
-  /// Renames a Deck. Blank is ignored, for the reason `createDeck(named:)` gives.
-  func rename(_ deck: DeckSummary, to name: String) {
-    let name = name.trimmed
-    guard !name.isEmpty, name != deck.name else { return }
-
-    perform { try repository.rename(deckWithID: deck.id, to: name) }
-  }
-
-  /// Deletes a Deck and its Cards. The confirmation this is behind lives in the view; there is
-  /// nothing to undo afterwards, which is the spec's choice and the reason for the confirmation.
-  func delete(_ deck: DeckSummary) {
-    perform { try repository.delete(deckWithID: deck.id) }
   }
 
   /// Runs a write, then re-reads. A write that throws leaves the screen reporting a broken store

@@ -186,6 +186,18 @@ struct DeckDetailModelTests {
     #expect(model.state.contents?.cards.map(\.front) == ["hablar"])
   }
 
+  @Test("A Card added while a filter would hide it brings the filter back to All, not silence")
+  func addingUnderAFilterThatWouldHideItShowsItAnyway() throws {
+    let (model, _, _) = try makeModel()
+    model.load()
+    model.show(.mastered)
+
+    model.addCard(front: "hablar", back: "to speak")
+
+    #expect(model.filter == .all)
+    #expect(model.state.contents?.cards.map(\.front) == ["hablar"])
+  }
+
   @Test("Editing a Card shows its new Front and Back")
   func editShowsTheNewContent() throws {
     let (model, _, _) = try makeModel()

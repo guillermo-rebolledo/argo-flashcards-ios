@@ -15,9 +15,9 @@ import SwiftUI
 struct RootView: View {
   @State private var decksModel: DecksModel
 
-  /// Held rather than the dependencies themselves: the shell hands screens what they need, and a
-  /// screen that could reach into the composition root would be a screen that could reach for
-  /// anything in it.
+  /// Kept so the shell can build a screen model on demand — Deck detail's is built per push, not
+  /// once here. It goes no further than this file: a screen is handed the one closure it needs,
+  /// never this, so no screen can reach into the composition root for anything else in it.
   private let dependencies: AppDependencies
 
   init(dependencies: AppDependencies) {

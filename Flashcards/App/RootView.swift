@@ -15,7 +15,13 @@ import SwiftUI
 struct RootView: View {
   @State private var decksModel: DecksModel
 
+  /// Kept so the shell can build a screen model on demand — Deck detail's is built per push, not
+  /// once here. It goes no further than this file: a screen is handed the one closure it needs,
+  /// never this, so no screen can reach into the composition root for anything else in it.
+  private let dependencies: AppDependencies
+
   init(dependencies: AppDependencies) {
+    self.dependencies = dependencies
     _decksModel = State(initialValue: dependencies.makeDecksModel())
   }
 
@@ -23,7 +29,9 @@ struct RootView: View {
     TabView {
       Tab("Decks", systemImage: "rectangle.on.rectangle") {
         NavigationStack {
-          DecksScreen(model: decksModel)
+          DecksScreen(
+            model: decksModel,
+            makeDeckDetailModel: { dependencies.makeDeckDetailModel(for: $0) })
         }
       }
 

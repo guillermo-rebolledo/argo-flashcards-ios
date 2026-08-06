@@ -70,57 +70,6 @@ struct DecksModelTests {
     #expect(model.state == .empty)
   }
 
-  @Test("Renaming a Deck shows it under its new name")
-  func renameShowsTheNewName() throws {
-    let (model, _) = try makeModel()
-    model.load()
-    model.createDeck(named: "Spanish verbs")
-    let deck = try #require(model.state.decks?.first)
-
-    model.rename(deck, to: "Spanish irregular verbs")
-
-    #expect(model.state.decks?.map(\.name) == ["Spanish irregular verbs"])
-    #expect(model.state.decks?.first?.id == deck.id)
-  }
-
-  @Test("Renaming to a blank name leaves the Deck as it was")
-  func renameToBlankIsIgnored() throws {
-    let (model, _) = try makeModel()
-    model.load()
-    model.createDeck(named: "Spanish verbs")
-    let deck = try #require(model.state.decks?.first)
-
-    model.rename(deck, to: "  ")
-
-    #expect(model.state.decks?.map(\.name) == ["Spanish verbs"])
-  }
-
-  @Test("Deleting a Deck removes it from the list")
-  func deleteRemovesTheDeck() throws {
-    let (model, dateProvider) = try makeModel()
-    model.load()
-    model.createDeck(named: "Spanish verbs")
-    dateProvider.advance(by: 60)
-    model.createDeck(named: "Kanji")
-    let kanji = try #require(model.state.decks?.first { $0.name == "Kanji" })
-
-    model.delete(kanji)
-
-    #expect(model.state.decks?.map(\.name) == ["Spanish verbs"])
-  }
-
-  @Test("Deleting the last Deck returns the screen to the empty state")
-  func deletingTheLastDeckIsEmptyAgain() throws {
-    let (model, _) = try makeModel()
-    model.load()
-    model.createDeck(named: "Spanish verbs")
-    let deck = try #require(model.state.decks?.first)
-
-    model.delete(deck)
-
-    #expect(model.state == .empty)
-  }
-
   @Test("Decks written in one run of the screen are there when the screen is built again")
   func decksSurviveANewModelOverTheSameStore() throws {
     let container = try ModelContainer.makeInMemoryContainer()

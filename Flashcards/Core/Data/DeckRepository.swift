@@ -29,6 +29,13 @@ protocol DeckRepository {
   /// Every Deck, newest first.
   func decks() throws -> [DeckSummary]
 
+  /// One Deck by id, or `nil` if it is no longer there.
+  ///
+  /// Deck detail re-reads its Deck through this rather than keeping the summary it was opened
+  /// with, so a rename shows in the title and a Deck deleted from under the screen is a `nil` the
+  /// screen can act on rather than a stale name it goes on drawing.
+  func deck(withID id: UUID) throws -> DeckSummary?
+
   /// Creates a Deck with the given name, stamped with the current instant.
   ///
   /// Names are not unique and are not checked for uniqueness: two Decks called "Chapter 3" are two
@@ -71,19 +78,23 @@ final class SwiftDataDeckRepository: DeckRepository {
     return DeckSummary(deck)
   }
 
+  func deck(withID id: UUID) throws -> DeckSummary? {
+    try storedDeck(withID: id).map(DeckSummary.init)
+  }
+
   func rename(deckWithID id: UUID, to name: String) throws {
-    guard let deck = try deck(withID: id) else { return }
+    guard let deck = try storedDeck(withID: id) else { return }
     deck.name = name
     try context.save()
   }
 
   func delete(deckWithID id: UUID) throws {
-    guard let deck = try deck(withID: id) else { return }
+    guard let deck = try storedDeck(withID: id) else { return }
     context.delete(deck)
     try context.save()
   }
 
-  private func deck(withID id: UUID) throws -> Deck? {
+  private func storedDeck(withID id: UUID) throws -> Deck? {
     var descriptor = FetchDescriptor<Deck>(predicate: #Predicate { $0.id == id })
     descriptor.fetchLimit = 1
     return try context.fetch(descriptor).first

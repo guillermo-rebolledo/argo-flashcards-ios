@@ -16,6 +16,8 @@ struct FailingDeckRepository: DeckRepository {
 
   func decks() throws -> [DeckSummary] { throw Failure() }
 
+  func deck(withID id: UUID) throws -> DeckSummary? { throw Failure() }
+
   @discardableResult
   func createDeck(named name: String) throws -> DeckSummary { throw Failure() }
 

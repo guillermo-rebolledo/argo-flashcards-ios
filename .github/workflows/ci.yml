@@ -11,11 +11,6 @@ concurrency:
 
 env:
   SCHEME: Flashcards
-  # OS is deliberately `latest` rather than a pinned version. The iOS 26 floor is enforced by the
-  # project's deployment target (ADR 0006), so pinning the simulator runtime here would add a
-  # second thing to keep in step with the runner image for no extra safety — and it breaks the
-  # build the day the image ships a different patch release.
-  DESTINATION: platform=iOS Simulator,name=iPhone 17,OS=latest
 
 jobs:
   format:
@@ -40,6 +35,43 @@ jobs:
 
       - name: Show toolchain
         run: xcodebuild -version
+
+      # Neither the device model nor the runtime is pinned. The iOS 26 floor is enforced by the
+      # project's deployment target (ADR 0006), so naming a simulator here would add a second thing
+      # to keep in step with the runner image for no extra safety.
+      #
+      # It is resolved to a UDID rather than passed to xcodebuild as `name=…,OS=latest` because
+      # xcodebuild resolves a name against CoreSimulator, which on a cold runner can still be
+      # enumerating devices: it then spends its silent 60s destination timeout and dies with exit 70,
+      # listing only placeholder destinations. That took out a run on PR #4 and passed on re-run
+      # untouched. Polling simctl ourselves turns that race into a wait, and an `id=` destination
+      # cannot be mis-resolved.
+      - name: Select and boot a simulator
+        run: |
+          UDID=""
+          for attempt in $(seq 1 12); do
+            UDID=$(xcrun simctl list devices available --json | jq -r '
+              [ .devices
+                | to_entries[]
+                | select(.key | test("SimRuntime.iOS-"))
+                | .value[]
+                | select(.name | startswith("iPhone")) ]
+              | first | .udid // empty')
+            if [ -n "$UDID" ]; then
+              break
+            fi
+            echo "No iPhone simulator available yet (attempt $attempt); waiting."
+            sleep 5
+          done
+          if [ -z "$UDID" ]; then
+            echo "::error::No iPhone simulator became available on this runner."
+            xcrun simctl list devices available
+            exit 1
+          fi
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "Using $(xcrun simctl list devices | grep "$UDID")"
+          echo "DESTINATION=id=$UDID" >> "$GITHUB_ENV"
 
       - name: Build and test
         run: |

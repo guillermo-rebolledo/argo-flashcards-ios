@@ -57,11 +57,13 @@ struct SettingsScreen: View {
       Section {
         Toggle("Card animations", isOn: cardAnimations)
       } footer: {
-        // Said plainly, because a learner turning this off is entitled to know what stays: the
-        // Grade still registers, and it still confirms itself in the hand.
+        // Says what turning it off does, rather than describing whichever way it currently sits.
+        // The second sentence is there because a learner turning this off is entitled to know what
+        // stays: the Grade still registers, and it still confirms itself in the hand.
         Text(
-          "Cards fade instead of flying. Follows your device's Reduce Motion setting until you "
-            + "change it here. Grading still gives the same feedback in your hand."
+          "Turned off, Cards fade instead of flying. Grading still gives the same feedback in "
+            + "your hand. This follows your device's Reduce Motion setting unless you set it "
+            + "the other way."
         )
       }
     }
@@ -79,10 +81,16 @@ struct SettingsScreen: View {
     Binding(get: { settings.theme }, set: { settings.theme = $0 })
   }
 
+  /// What the toggle means in both directions is `CardAnimations`' to say, not this screen's —
+  /// setting it to what the device already says is following the device again, and that rule is
+  /// worth a test.
   private var cardAnimations: Binding<Bool> {
     Binding(
       get: { settings.cardAnimations.areOn(whenDeviceReducesMotion: deviceReducesMotion) },
-      set: { settings.cardAnimations = $0 ? .on : .off })
+      set: {
+        settings.cardAnimations = .chosen(
+          animating: $0, whenDeviceReducesMotion: deviceReducesMotion)
+      })
   }
 }
 
@@ -90,6 +98,6 @@ struct SettingsScreen: View {
 /// installed on the same simulator.
 #Preview {
   NavigationStack {
-    SettingsScreen(settings: AppSettings(defaults: UserDefaults(suiteName: "preview.settings")!))
+    SettingsScreen(settings: AppSettings(defaults: UserDefaults(suiteName: "preview.\(UUID())")!))
   }
 }

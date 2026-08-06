@@ -96,10 +96,9 @@ final class SessionModel {
     self.length = length
   }
 
-  /// What a Session holds for a learner who has never opened Settings. The one number
-  /// `SessionLength.five` stands for, kept here because it is a fact about a Session rather than
-  /// about the setting.
-  static let defaultLength = SessionLength.five.cardCount
+  /// What a Session holds when nobody has said otherwise — the unconfigured `SessionLength`, so a
+  /// Session started without the setting is the same length as one started with it.
+  static let defaultLength = SessionLength.default.cardCount
 
   /// Draws the Session and shows its first Card. **Calling it again does nothing** — the screen
   /// calls it on appear, and a Session that redrew itself on the way back from a system alert

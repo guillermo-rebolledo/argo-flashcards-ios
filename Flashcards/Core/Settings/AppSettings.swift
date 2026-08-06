@@ -13,6 +13,10 @@ enum SessionLength: Int, CaseIterable, Identifiable, Sendable {
   case five = 5
   case ten = 10
 
+  /// What a learner who has never opened Settings gets. The one place the number lives — a Session
+  /// reads it from here rather than carrying a five of its own.
+  static let `default` = SessionLength.five
+
   var id: Int { rawValue }
 
   /// How many Cards a Session of this length draws.
@@ -83,6 +87,18 @@ enum CardAnimations: Equatable, Sendable {
   func areOn(whenDeviceReducesMotion deviceReducesMotion: Bool) -> Bool {
     !reducesMotion(whenDeviceReducesMotion: deviceReducesMotion)
   }
+
+  /// What a two-position toggle means, given what the device says.
+  ///
+  /// **Agreeing with the device is following it.** A toggle can only ever say on or off, so if
+  /// flipping it always stored an override, the first touch would silently opt the learner out of
+  /// Reduce Motion for good — a state they could see but never get back to. Setting it to what the
+  /// device already says means exactly that, and leaves them tracking the device again.
+  static func chosen(animating: Bool, whenDeviceReducesMotion reduces: Bool) -> CardAnimations {
+    let agreesWithTheDevice = animating == !reduces
+    if agreesWithTheDevice { return .followDevice }
+    return animating ? .on : .off
+  }
 }
 
 /// The learner's settings: the values themselves, and the only place they are read from or written
@@ -132,7 +148,7 @@ final class AppSettings {
     // A value this build cannot read — an older one's, or a hand-edited plist — is the default
     // rather than a crash or a Session of seven Cards.
     sessionLength =
-      SessionLength(rawValue: defaults.integer(forKey: Key.sessionLength)) ?? .five
+      SessionLength(rawValue: defaults.integer(forKey: Key.sessionLength)) ?? .default
     theme = defaults.string(forKey: Key.theme).flatMap(ThemePreference.init(rawValue:)) ?? .system
     cardAnimations =
       defaults.object(forKey: Key.cardAnimations) == nil
@@ -157,4 +173,13 @@ extension EnvironmentValues {
   /// `followDevice`, so a preview — or any view drawn outside the app's shell — still honours
   /// Reduce Motion without being handed the settings.
   @Entry var cardAnimations: CardAnimations = .followDevice
+
+  /// The setting and the device's own answer, resolved into the one question Review asks.
+  ///
+  /// Derived here rather than in each view that animates a Card, so the flight, the tilt, the
+  /// commit and the reveal cannot end up reading it two different ways. **The haptic does not ask
+  /// it** — a Grade still confirms itself in the hand when the Card stops moving.
+  var reducesCardMotion: Bool {
+    cardAnimations.reducesMotion(whenDeviceReducesMotion: accessibilityReduceMotion)
+  }
 }

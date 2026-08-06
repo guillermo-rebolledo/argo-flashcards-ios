@@ -82,6 +82,39 @@ struct AppSettingsTests {
     #expect(CardAnimations.followDevice.areOn(whenDeviceReducesMotion: false))
   }
 
+  /// A two-position toggle over a three-state setting can only reach the third state by agreeing
+  /// with the device — without this rule the first touch would opt the learner out of Reduce Motion
+  /// for good.
+  @Test("Setting the toggle to what the device already says follows the device again")
+  func agreeingWithTheDeviceIsFollowingIt() {
+    #expect(
+      CardAnimations.chosen(animating: false, whenDeviceReducesMotion: true) == .followDevice)
+    #expect(
+      CardAnimations.chosen(animating: true, whenDeviceReducesMotion: false) == .followDevice)
+  }
+
+  @Test("Setting the toggle against the device stores the override")
+  func disagreeingWithTheDeviceStoresAnOverride() {
+    #expect(CardAnimations.chosen(animating: true, whenDeviceReducesMotion: true) == .on)
+    #expect(CardAnimations.chosen(animating: false, whenDeviceReducesMotion: false) == .off)
+  }
+
+  /// The round trip the Settings screen makes: flip the toggle off and on again on a device that is
+  /// not reducing motion, and the learner is back where they started rather than pinned to `on`.
+  @Test("Flipping the toggle back leaves nothing overridden")
+  func flippingTheToggleBackLeavesNothingOverridden() {
+    let store = TemporaryDefaults()
+    let settings = AppSettings(defaults: store.defaults)
+
+    settings.cardAnimations = .chosen(animating: false, whenDeviceReducesMotion: false)
+    #expect(settings.cardAnimations == .off)
+
+    settings.cardAnimations = .chosen(animating: true, whenDeviceReducesMotion: false)
+
+    #expect(settings.cardAnimations == .followDevice)
+    #expect(AppSettings(defaults: store.defaults).cardAnimations == .followDevice)
+  }
+
   @Test("The theme override names a colour scheme, and following the system names none")
   func themesNameAColourScheme() {
     #expect(ThemePreference.system.colorScheme == nil)

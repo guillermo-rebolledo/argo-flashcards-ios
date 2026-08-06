@@ -87,17 +87,18 @@ final class SessionModel {
   private var knewIt = 0
   private var misses: [CardSummary] = []
 
+  /// `length` is the learner's chosen `SessionLength`, read by the composition root at the moment
+  /// the Session is presented. It arrives as a number rather than as the setting itself, so a
+  /// Session's rules can be driven without one.
   init(deckID: UUID, cardRepository: any CardRepository, length: Int = SessionModel.defaultLength) {
     self.deckID = deckID
     self.cardRepository = cardRepository
     self.length = length
   }
 
-  /// How many Cards a Session holds.
-  ///
-  /// Fixed here for now. The setting that makes it a choice of 3, 5, or 10 arrives with the
-  /// Settings ticket, and arrives as an argument to this model rather than as a second constant.
-  static let defaultLength = 5
+  /// What a Session holds when nobody has said otherwise — the unconfigured `SessionLength`, so a
+  /// Session started without the setting is the same length as one started with it.
+  static let defaultLength = SessionLength.default.cardCount
 
   /// Draws the Session and shows its first Card. **Calling it again does nothing** — the screen
   /// calls it on appear, and a Session that redrew itself on the way back from a system alert

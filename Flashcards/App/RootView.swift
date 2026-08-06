@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -44,7 +45,7 @@ struct RootView: View {
 
       Tab("Settings", systemImage: "gearshape") {
         NavigationStack {
-          SettingsScreen()
+          SettingsScreen(settings: dependencies.settings)
         }
       }
     }
@@ -52,19 +53,31 @@ struct RootView: View {
     // *under* glass rather than sitting in a box above it. This is the behaviour the whole
     // control-layer/content-layer split depends on being visible — see ADR 0006.
     .tabBarMinimizeBehavior(.onScrollDown)
+    // The theme override, applied at the top of the app so it reaches everything below including a
+    // Session's cover. `nil` here is the whole app following the system, which is the default and
+    // is what this file said before the setting existed. It is **not** a tint: see ADR 0008.
+    .preferredColorScheme(dependencies.settings.theme.colorScheme)
+    // Read once here and handed down, so Review does not have to know a settings object exists —
+    // and so a change made while a Session is up reaches the Card that is already on screen.
+    .environment(\.cardAnimations, dependencies.settings.cardAnimations)
   }
 }
 
 /// Previews are the verification surface for the two things this shell must get right and that no
 /// unit test can assert: that type scales, and that light and dark both come from the system.
 ///
-/// Nothing here sets a `colorScheme` override or a fixed font. Light and dark follow the system
-/// because nothing forces them; the previews below exist so a regression is visible.
+/// Nothing here sets a fixed font, and the shell's own `colorScheme` is whatever the theme setting
+/// resolves to — `nil`, and so the system's, until a learner overrides it. The previews below exist
+/// so a regression is visible.
 ///
-/// Each builds the shell over an in-memory store, so a preview never writes into the real one and
-/// two previews never see each other's Decks.
+/// Each builds the shell over an in-memory store and a defaults suite of its own, so a preview
+/// never writes into the real store or the real settings, and two previews never see each other's
+/// Decks.
+@MainActor
 private func previewDependencies() -> AppDependencies {
-  AppDependencies(modelContainer: try! ModelContainer.makeInMemoryContainer())
+  AppDependencies(
+    modelContainer: try! ModelContainer.makeInMemoryContainer(),
+    settings: AppSettings(defaults: UserDefaults(suiteName: "preview.\(UUID())")!))
 }
 
 #Preview("Light") {

@@ -18,7 +18,8 @@ import Foundation
 /// - Parameters:
 ///   - cards: Every Card in the Deck, in any order. Composition depends on the set, not on the
 ///     order it arrived in.
-///   - length: How many Cards the Session should hold. A Deck with fewer gives what it has.
+///   - length: How many Cards the Session should hold — the learner's chosen `SessionLength`. A
+///     Deck with fewer gives what it has.
 /// - Returns: The Cards of the Session, in the order they will be shown.
 func composeSession(from cards: [CardSummary], length: Int) -> [CardSummary] {
   guard length > 0 else { return [] }

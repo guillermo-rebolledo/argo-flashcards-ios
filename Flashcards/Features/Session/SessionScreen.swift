@@ -120,7 +120,18 @@ private struct ReviewView: View {
   /// what stops the feedback from meaning "you moved" rather than "a Grade registered".
   @State private var committedFlights = 0
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityReduceMotion) private var deviceReducesMotion
+
+  /// The learner's Card animations setting, which the shell resolves from Settings. It answers for
+  /// the device unless they have said otherwise — see `CardAnimations`.
+  @Environment(\.cardAnimations) private var cardAnimations
+
+  /// The one question the motion here turns on, asked in one place so the flight, the tilt and the
+  /// commit animation cannot disagree about it. **The haptic below is not asked** — a Grade still
+  /// confirms itself in the hand when the Card stops moving.
+  private var reduceMotion: Bool {
+    cardAnimations.reducesMotion(whenDeviceReducesMotion: deviceReducesMotion)
+  }
 
   var body: some View {
     VStack(spacing: 24) {
@@ -304,9 +315,14 @@ private struct CardFace: View {
   let isRevealed: Bool
   let onTap: () -> Void
 
-  /// Motion is the only thing Reduce Motion takes away here. The Back still arrives, and it still
-  /// arrives beneath the Front — it simply stops springing.
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// Motion is the only thing turning animations off takes away here. The Back still arrives, and
+  /// it still arrives beneath the Front — it simply stops springing.
+  @Environment(\.accessibilityReduceMotion) private var deviceReducesMotion
+  @Environment(\.cardAnimations) private var cardAnimations
+
+  private var reduceMotion: Bool {
+    cardAnimations.reducesMotion(whenDeviceReducesMotion: deviceReducesMotion)
+  }
 
   var body: some View {
     VStack(spacing: 16) {

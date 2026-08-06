@@ -10,9 +10,14 @@ import SwiftData
 ///
 /// The rule this type exists to enforce: a screen model takes what it needs as initialiser
 /// parameters. It does not reach for a shared instance, and it does not know this type exists.
+@MainActor
 struct AppDependencies {
   let modelContainer: ModelContainer
   let dateProvider: any DateProvider
+
+  /// The learner's settings, made here and shared: the shell draws the theme from it, Review draws
+  /// the Card animations from it, and a Session is composed to the length it holds.
+  let settings: AppSettings
 
   /// The one context the screens read and write through.
   ///
@@ -22,9 +27,14 @@ struct AppDependencies {
   /// own context per test, which is what keeps them isolated from each other.
   let mainContext: ModelContext
 
-  init(modelContainer: ModelContainer, dateProvider: any DateProvider = SystemDateProvider()) {
+  init(
+    modelContainer: ModelContainer,
+    dateProvider: any DateProvider = SystemDateProvider(),
+    settings: AppSettings = AppSettings()
+  ) {
     self.modelContainer = modelContainer
     self.dateProvider = dateProvider
+    self.settings = settings
     self.mainContext = ModelContext(modelContainer)
   }
 
@@ -47,17 +57,22 @@ struct AppDependencies {
 
   /// Builds a Session's model, for the Deck the user started studying. One per presentation: the
   /// sitting it models begins when the cover goes up and is over when it comes down.
+  ///
+  /// The chosen Session length is read here, at the moment the cover goes up, which is what makes
+  /// a change in Settings apply to the next Session and leave one already running alone.
   func makeSessionModel(forDeckWithID deckID: UUID) -> SessionModel {
     SessionModel(
       deckID: deckID,
-      cardRepository: SwiftDataCardRepository(context: mainContext, dateProvider: dateProvider))
+      cardRepository: SwiftDataCardRepository(context: mainContext, dateProvider: dateProvider),
+      length: settings.sessionLength.cardCount)
   }
 
   /// Assembles the production graph.
   static func makeLive() throws -> AppDependencies {
     AppDependencies(
       modelContainer: try ModelContainer.makeApplicationContainer(),
-      dateProvider: SystemDateProvider()
+      dateProvider: SystemDateProvider(),
+      settings: AppSettings()
     )
   }
 }

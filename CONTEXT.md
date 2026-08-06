@@ -61,6 +61,12 @@ _Avoid_: Study, drill, practice
 The user's verdict on a Card during Review: `Knew it` or `Again`.
 _Avoid_: Rating, score, answer, result
 
+**Swipe**:
+Grading by dragging the Card — right for `Knew it`, left for `Again`. The other way to Grade, beside
+the two buttons, and the same verdict either way. A drag too short to be a Swipe is a tap, which
+reveals the Back. The drag is the finger's movement; the Swipe is the one that Graded.
+_Avoid_: Fling, dismiss, gesture
+
 **Mastery streak**:
 The number of consecutive `Knew it` grades on a Card. `Again` resets it to zero.
 _Avoid_: Score, level, box, strength

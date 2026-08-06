@@ -20,7 +20,6 @@
 		A1000000000000000000012 /* Exceptions for "Flashcards" folder in "Flashcards" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Core/Data/README.md",
 				"Core/Generation/README.md",
 				"Core/Reminders/README.md",
 				"Core/Share/README.md",

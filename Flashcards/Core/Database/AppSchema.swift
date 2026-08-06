@@ -31,7 +31,7 @@ extension ModelContainer {
     return try ModelContainer(for: AppSchema.schema, configurations: configuration)
   }
 
-  /// An in-memory container over the real schema, for tests.
+  /// An in-memory container over the real schema, for tests and for previews.
   ///
   /// Tests run against the real models and real repositories rather than fakes, so a test
   /// exercising Session composition runs against the real schema and catches schema and fetch

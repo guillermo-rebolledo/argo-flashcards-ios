@@ -19,7 +19,7 @@ struct FlashcardsApp: App {
 
   var body: some Scene {
     WindowGroup {
-      RootView()
+      RootView(dependencies: dependencies)
     }
     // The container is deliberately **not** placed in the SwiftUI environment via
     // `.modelContainer(_:)`. Doing so is what makes `@Query` available in every view for free, and

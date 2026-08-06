@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 /// The app's shell: three tabs, each owning its own `NavigationStack`.
@@ -8,15 +9,21 @@ import SwiftUI
 /// **No custom tint and no brand colour is applied anywhere in this file, and none should be.**
 /// System defaults throughout, per Apple's guidance that glass surfaces stay neutral and let
 /// content show through. See ADR 0008.
-/// Takes no dependencies: the shell itself needs none, and each screen will receive what it needs
-/// through its own initialiser when it gains a model. Threading an unused `AppDependencies` through
-/// here would be a parameter that exists to look like architecture.
+/// The shell needs nothing itself, but it is where screen models are given a lifetime: a model
+/// held in `@State` here survives tab switches, so the Decks list is not rebuilt and re-read every
+/// time the user comes back to it. Progress and Settings gain theirs when they gain models.
 struct RootView: View {
+  @State private var decksModel: DecksModel
+
+  init(dependencies: AppDependencies) {
+    _decksModel = State(initialValue: dependencies.makeDecksModel())
+  }
+
   var body: some View {
     TabView {
       Tab("Decks", systemImage: "rectangle.on.rectangle") {
         NavigationStack {
-          DecksScreen()
+          DecksScreen(model: decksModel)
         }
       }
 
@@ -44,17 +51,24 @@ struct RootView: View {
 ///
 /// Nothing here sets a `colorScheme` override or a fixed font. Light and dark follow the system
 /// because nothing forces them; the previews below exist so a regression is visible.
+///
+/// Each builds the shell over an in-memory store, so a preview never writes into the real one and
+/// two previews never see each other's Decks.
+private func previewDependencies() -> AppDependencies {
+  AppDependencies(modelContainer: try! ModelContainer.makeInMemoryContainer())
+}
+
 #Preview("Light") {
-  RootView()
+  RootView(dependencies: previewDependencies())
     .preferredColorScheme(.light)
 }
 
 #Preview("Dark") {
-  RootView()
+  RootView(dependencies: previewDependencies())
     .preferredColorScheme(.dark)
 }
 
 #Preview("Accessibility XXXL") {
-  RootView()
+  RootView(dependencies: previewDependencies())
     .dynamicTypeSize(.accessibility5)
 }

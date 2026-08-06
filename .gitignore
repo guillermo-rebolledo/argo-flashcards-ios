@@ -24,7 +24,8 @@ xcuserdata/
 .build/
 .swiftpm/
 Packages/
-Package.resolved
+## Package.resolved is deliberately NOT ignored. This is an application, not a library: the
+## resolved versions are what make a build reproducible across machines and CI.
 
 ## Playgrounds
 timeline.xctimeline

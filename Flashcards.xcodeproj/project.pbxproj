@@ -24,7 +24,6 @@
 				"Core/Reminders/README.md",
 				"Core/Share/README.md",
 				"Features/Generate/README.md",
-				"Features/Session/README.md",
 			);
 			target = A1000000000000000000040 /* Flashcards */;
 		};

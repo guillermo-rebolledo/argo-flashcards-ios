@@ -19,6 +19,8 @@ struct FailingCardRepository: CardRepository {
   func updateCard(withID id: UUID, front: String, back: String) throws { throw Failure() }
 
   func delete(cardWithID id: UUID) throws { throw Failure() }
+
+  func recordGrade(_ grade: Grade, forCardWithID id: UUID) throws { throw Failure() }
 }
 
 /// A `CardRepository` that reads an empty Deck happily and fails every write.
@@ -40,4 +42,6 @@ struct WriteFailingCardRepository: CardRepository {
   func updateCard(withID id: UUID, front: String, back: String) throws { throw Failure() }
 
   func delete(cardWithID id: UUID) throws { throw Failure() }
+
+  func recordGrade(_ grade: Grade, forCardWithID id: UUID) throws { throw Failure() }
 }

@@ -31,7 +31,8 @@ struct RootView: View {
         NavigationStack {
           DecksScreen(
             model: decksModel,
-            makeDeckDetailModel: { dependencies.makeDeckDetailModel(for: $0) })
+            makeDeckDetailModel: { dependencies.makeDeckDetailModel(for: $0) },
+            makeSessionModel: { dependencies.makeSessionModel(forDeckWithID: $0.id) })
         }
       }
 

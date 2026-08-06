@@ -18,6 +18,10 @@ struct DecksScreen: View {
   /// the assembling, here as everywhere.
   let makeDeckDetailModel: (DeckSummary) -> DeckDetailModel
 
+  /// Likewise for the Session a Deck's detail screen can start, for the same reason: the screen
+  /// that presents it is handed the one closure it needs and nothing else.
+  let makeSessionModel: (DeckSummary) -> SessionModel
+
   var body: some View {
     DecksView(
       state: model.state,
@@ -27,7 +31,9 @@ struct DecksScreen: View {
     // drawable from a state alone — previews and any later screen linking to a Deck get the same
     // rows without needing a way to build a Deck detail model.
     .navigationDestination(for: DeckSummary.self) { deck in
-      DeckDetailScreen(model: makeDeckDetailModel(deck))
+      DeckDetailScreen(
+        model: makeDeckDetailModel(deck),
+        makeSessionModel: { makeSessionModel(deck) })
     }
     .onAppear { model.load() }
   }

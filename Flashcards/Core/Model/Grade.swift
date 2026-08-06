@@ -8,4 +8,13 @@ enum Grade: Sendable {
 
   /// It did not. Returns the Card to a Mastery streak of zero, Mastered or not.
   case again
+
+  /// What Review calls this Grade, wherever it offers it. One string per Grade, so the buttons and
+  /// the swipe hints cannot drift apart into two names for one verdict.
+  var title: String {
+    switch self {
+    case .knewIt: "Knew it"
+    case .again: "Again"
+    }
+  }
 }

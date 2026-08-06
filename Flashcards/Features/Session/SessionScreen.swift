@@ -106,11 +106,21 @@ struct SessionView: View {
   }
 }
 
-/// One Card, and the two verdicts on it.
+/// One Card, and the three ways to put a verdict on it: the two buttons, and the drag.
 private struct ReviewView: View {
   let reviewing: ReviewingCard
   let onReveal: () -> Void
   let onGrade: (Grade) -> Void
+
+  /// The signature interaction's whole state, in a type of its own — see `CardDragState`. The view
+  /// only animates towards what it says and reports what the finger did.
+  @State private var drag = CardDragState()
+
+  /// Bumped on every commit so the haptic fires once per Grade. Spring-back bumps nothing, which is
+  /// what stops the feedback from meaning "you moved" rather than "a Grade registered".
+  @State private var committedFlights = 0
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     VStack(spacing: 24) {
@@ -123,26 +133,163 @@ private struct ReviewView: View {
 
       Spacer(minLength: 0)
 
-      CardFace(card: reviewing.card, isRevealed: reviewing.isRevealed, onTap: onReveal)
+      ZStack(alignment: .bottom) {
+        CardFace(card: reviewing.card, isRevealed: reviewing.isRevealed, onTap: onReveal)
+          .offset(x: drag.offset)
+          .rotationEffect(drag.rotation)
+          .opacity(drag.opacity)
+          .gesture(dragGesture)
+
+        GradeHints(
+          againOpacity: drag.hintOpacity(for: .again),
+          knewItOpacity: drag.hintOpacity(for: .knewIt),
+          travel: drag.hintTravel
+        )
+        .padding(.bottom, -18)
+        // The hints answer the drag; they must never eat it. A view at zero opacity is still hit
+        // tested, so without this the chips would be dead zones over the Card they float on.
+        .allowsHitTesting(false)
+      }
 
       Spacer(minLength: 0)
 
       gradeButtons
     }
     .padding(20)
+    // Read on every pass rather than at commit time: the setting can change while a Session is up.
+    .onChange(of: reduceMotion, initial: true) { drag.reduceMotion = reduceMotion }
+    // The Card that flew away is the same view as the one that replaces it, so the next Card is
+    // squared up without animation — it arrives face down and level, never sliding in from the
+    // last one's exit.
+    .onChange(of: reviewing.card.id) { drag.reset() }
+    // Haptics are not motion, so this fires under Reduce Motion too. `.impact` rather than a
+    // notification: a Grade is a thing the user did, not news the app is breaking to them.
+    .sensoryFeedback(.impact(flexibility: .soft), trigger: committedFlights)
   }
 
-  /// `Again` first and `Knew it` second, matching the left-to-right order the swipe will commit in
-  /// when it arrives, so the two ways of Grading never disagree about which side is which.
+  /// The drag itself. `minimumDistance: 0` so the gesture sees the touch from the first point,
+  /// which is what lets a movement under the tap threshold be reported as a tap here rather than
+  /// being raced against a separate tap recogniser the drag would swallow.
+  private var dragGesture: some Gesture {
+    DragGesture(minimumDistance: 0)
+      .onChanged { value in
+        // Catching a Card in mid-flight is a retarget of the spring already running, not a jump:
+        // animating this one change is what lets it come back from wherever it had got to.
+        if drag.isFlying {
+          withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8)) {
+            drag.drag(to: value.translation.width)
+          }
+        } else {
+          drag.drag(to: value.translation.width)
+        }
+      }
+      .onEnded { value in
+        // The outcome is decided on a copy, so the one state change the view makes is the one the
+        // animation below is wrapped around.
+        var released = drag
+        switch released.end(translation: value.translation.width, velocity: value.velocity.width) {
+        case .tap:
+          drag = released
+          onReveal()
+
+        case .springBack:
+          withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) { drag = released }
+
+        case .commit(let grade, let flight):
+          committedFlights += 1
+          // Nothing is recorded until the flight lands, and only if it is still the flight that
+          // started here — a Card caught on the way out was never Graded.
+          withAnimation(commitAnimation(released: released, velocity: value.velocity.width)) {
+            drag = released
+          } completion: {
+            if drag.isFlightInTheAir(flight) { onGrade(grade) }
+          }
+        }
+      }
+  }
+
+  /// The commit's motion: **a spring, never a duration.**
+  ///
+  /// An interpolating spring rather than SwiftUI's smooth one because this is the only kind that
+  /// takes the finger's velocity — a hard flick leaves faster than a slow push over the threshold —
+  /// and because it retargets from wherever it has got to, which is what keeps a Card in mid-flight
+  /// catchable. A duration-based commit could do neither, and is the clearest tell of a ported
+  /// Android app.
+  ///
+  /// Reduce Motion is the exception: the Card is not going anywhere, so all that is left to time is
+  /// the fade.
+  private func commitAnimation(released: CardDragState, velocity: CGFloat) -> Animation {
+    guard !reduceMotion else { return .easeOut(duration: 0.2) }
+    // `initialVelocity` is measured in animations-worth of travel per second, so the gesture's
+    // points per second are divided by the distance this particular throw has left to cover.
+    let remaining = max(1, abs(released.offset - drag.offset))
+    return .interpolatingSpring(
+      mass: 1, stiffness: 130, damping: 24, initialVelocity: min(40, abs(velocity) / remaining))
+  }
+
+  /// `Again` first and `Knew it` second, matching the left-to-right order the drag commits in, so
+  /// the two ways of Grading never disagree about which side is which.
   private var gradeButtons: some View {
     HStack(spacing: 12) {
-      Button("Again") { onGrade(.again) }
+      Button(Grade.again.title) { onGrade(.again) }
         .buttonStyle(.bordered)
-      Button("Knew it") { onGrade(.knewIt) }
+      Button(Grade.knewIt.title) { onGrade(.knewIt) }
         .buttonStyle(.borderedProminent)
     }
     .controlSize(.large)
     .frame(maxWidth: .infinity)
+  }
+}
+
+/// What letting go would do, floating over the Card.
+///
+/// **The one place glass earns its keep.** These are controls hovering over content, which is
+/// exactly what the material is for. The two chips sit on top of each other at rest and ride apart
+/// with the drag, so inside a `GlassEffectContainer` they genuinely morph and merge as the Card
+/// moves — the reason for the container rather than two blurred capsules.
+///
+/// Colour does semantic work here and nowhere else in the app: `.green` for `Knew it`, `.orange`
+/// for `Again` — **never red**. `Again` means "come back to this", not "you got it wrong". It is
+/// carried by the text and the symbol, not by a tinted glass: ADR 0006 keeps the material itself
+/// neutral so what is behind it still shows through.
+private struct GradeHints: View {
+  let againOpacity: Double
+  let knewItOpacity: Double
+
+  /// How far the pair has ridden with the Card. Negative is towards `Again`.
+  let travel: CGFloat
+
+  @Namespace private var glass
+
+  var body: some View {
+    GlassEffectContainer(spacing: 20) {
+      // Closer together than the container's spacing, the two chips read as one lozenge; the drag
+      // pulls them past it and they separate, which is the morph the material is here for.
+      HStack(spacing: abs(travel)) {
+        hint(.again, systemImage: "arrow.counterclockwise", tint: .orange, opacity: againOpacity)
+        hint(.knewIt, systemImage: "checkmark", tint: .green, opacity: knewItOpacity)
+      }
+      .offset(x: travel)
+    }
+    // The hints answer a drag, and a drag is not something VoiceOver performs: read out, they would
+    // announce themselves over the Card and duplicate the two buttons underneath it.
+    .accessibilityHidden(true)
+  }
+
+  private func hint(
+    _ grade: Grade, systemImage: String, tint: Color, opacity: Double
+  ) -> some View {
+    Label(grade.title, systemImage: systemImage)
+      .font(.subheadline.weight(.semibold))
+      .foregroundStyle(tint)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+      .glassEffect(.regular, in: .capsule)
+      .glassEffectID(grade.title, in: glass)
+      // Tracking the drag over the commit threshold is the affordance: the hint is at its plainest
+      // exactly where letting go would Grade.
+      .opacity(opacity)
+      .scaleEffect(0.9 + 0.1 * opacity)
   }
 }
 
@@ -188,10 +335,14 @@ private struct CardFace: View {
       reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8), value: isRevealed
     )
     .contentShape(Rectangle())
-    .onTapGesture { onTap() }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isButton)
     .accessibilityHint(isRevealed ? "Hides the Back" : "Reveals the Back")
+    // The reveal is not its own tap recogniser: a separate one would race the drag for the same
+    // touch, and the drag would win. Review reports a movement under the tap threshold as a tap
+    // instead, so the two can never disagree. This is the same reveal, for VoiceOver, which has no
+    // drag to make.
+    .accessibilityAction { onTap() }
   }
 }
 

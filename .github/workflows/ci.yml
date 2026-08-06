@@ -46,7 +46,7 @@ jobs:
       # listing only placeholder destinations. That took out a run on PR #4 and passed on re-run
       # untouched. Polling simctl ourselves turns that race into a wait, and an `id=` destination
       # cannot be mis-resolved.
-      - name: Select and boot a simulator
+      - name: Select a simulator
         run: |
           UDID=""
           for attempt in $(seq 1 12); do
@@ -68,8 +68,9 @@ jobs:
             xcrun simctl list devices available
             exit 1
           fi
-          xcrun simctl boot "$UDID" || true
-          xcrun simctl bootstatus "$UDID" -b
+          # Deliberately not booted here: xcodebuild boots an `id=` device itself as part of
+          # testing, and pre-booting it measured as ~2min of pure overhead with no matching
+          # saving in the test step.
           echo "Using $(xcrun simctl list devices | grep "$UDID")"
           echo "DESTINATION=id=$UDID" >> "$GITHUB_ENV"
 
